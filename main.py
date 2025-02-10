@@ -238,6 +238,35 @@ def dealDamage(ore,other):
         return True
     return False
 
+def getAverageDamage(ore):
+    # get ore stats
+    oreStats = ores.oreEquipment[ores.ores.index(ore)][0][1]
+
+    critamount = 1 + oreStats["critstrength"] if oreStats.get("critstrength") else 1
+
+    #calculate base damage without factoring in accuracy/delay
+    baseDamage = (oreStats["damage"]["number"] / 2 + 0.5) * (oreStats["damage"]["sides"] + (critamount * oreStats["critchance"]))
+    baseDamage += (oreStats["damageadd"] if oreStats.get("damageadd") else 0)
+    baseDamage *= (oreStats["damagemulti"] if oreStats.get("damagemulti") else 1)
+    baseDamage += oreStats["truedamage"] if oreStats.get("truedamage") else 0
+
+    # now get dps
+    DamagePerSecond = (baseDamage / (max(0,oreStats["delay"]) * max(0,ores.oreEquipment[ores.ores.index(ore)][1][1]["encumbrance"]))) * oreStats["accuracy"]
+
+    return f"{DamagePerSecond:.3f}"
+
+def getArmourStats(ore):
+    # get ore stats
+    oreStats = ores.oreEquipment[ores.ores.index(ore)][1][1]
+
+    #calculate defense and protection
+    Defense = oreStats["defense"] * (oreStats["defensemulti"] if oreStats.get("defensemulti") else 1)
+    dodge = (oreStats["dodge"] if oreStats.get("dodge") else 0) * 100
+    protection = oreStats["toughness"]
+
+    return (f"{Defense:.1f}", f"{dodge:.0f}%", f"{protection:.0f}")
+
+
 print(f"{colors.bold}{colors.underline}Type cmds for a list of all commands{colors.reset}")
 while True:
     currentRound += 1
@@ -280,6 +309,8 @@ while True:
         elif response[0] == "stats":
             if response[1] in ores.ores:
                 stats = ores.get_ore_stats(g,response[1])
+                dps = getAverageDamage(response[1])
+                armourStats = getArmourStats(response[1])
                 lbPlace = 0
                 for key,value in ores.lb.items():
                     if value == response[1]:
@@ -291,7 +322,11 @@ while True:
                 print(f"{colors.fg.cyan}Ore Number: {stats[1]}{colors.reset}")
                 print(f"{colors.fg.orange}Kills: {stats[0]}{colors.reset}")
                 print(f"{colors.fg.pink}Weapon: {colors.reset}{stats[4][0]}{colors.reset}")
+                print(f"{colors.fg.pink}{colors.underline}DPS:{colors.reset} {dps}{colors.reset}")
                 print(f"{colors.fg.purple}Armour: {colors.reset}{stats[5][0]}{colors.reset}")
+                print(f"{colors.fg.purple}{colors.underline}Defense:{colors.reset} {armourStats[0]}{colors.reset}", end=" ")
+                print(f"{colors.fg.purple}(Protection: {colors.reset}{armourStats[2]}{colors.fg.purple},{colors.reset}", end=" ")
+                print(f"{colors.fg.purple}Dodge chance: {colors.reset}{armourStats[1]}{colors.fg.purple}){colors.reset}")
                 if stats[2]:
                     print(f"{colors.bold}Neighbours: {stats[3]}{colors.reset}")
         elif response[0] == "lb":
